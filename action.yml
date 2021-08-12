@@ -1,8 +1,12 @@
 name: strip docker image shell action
 description: strip docker image shell action
 author: RekGRpth
+inputs:
+  args:
+    description: strip docker image args
+    required: true
 runs:
   using: composite
   steps:
-    - run: "${GITHUB_ACTION_PATH}/action.sh"
+    - run: "${GITHUB_ACTION_PATH}/action.sh" ${{ inputs.args }}
       shell: sh
