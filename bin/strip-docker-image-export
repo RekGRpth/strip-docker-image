@@ -132,14 +132,14 @@ list_dependencies() {
 		        list_dependencies "$F"
 		    done
 		    else
-			if /usr/bin/ldd "$FILE" >/dev/null 2>&1 ; then
+			#if /usr/bin/ldd "$FILE" >/dev/null 2>&1 ; then
 				/usr/bin/ldd "$FILE" | \
 				awk '/statically/{next;} /=>/ { print $3; next; } { print $1 }' | \
 				while read -r LINE ; do
 					test -n "$VERBOSE" && echo "INFO: including $LINE" >&2
 					print_file "$LINE"
 				done
-			fi
+			#fi
 			fi
 		else
 			test -n "$VERBOSE" && echo "INFO: ignoring not existent file $FILE" >&2
