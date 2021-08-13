@@ -126,12 +126,12 @@ print_file() {
 list_dependencies() {
 	for FILE in "$@" ; do
 		if [ -e "$FILE" ] ; then
+			print_file "$FILE"
 		    if [ -d "$FILE" ]; then
 		    find "$FILE" -type f | while read -r F; do
 		        list_dependencies "$F"
 		    done
 		    else
-			print_file "$FILE"
 			if /usr/bin/ldd "$FILE" >/dev/null 2>&1 ; then
 				/usr/bin/ldd "$FILE" | \
 				awk '/statically/{next;} /=>/ { print $3; next; } { print $1 }' | \
