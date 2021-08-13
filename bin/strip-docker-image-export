@@ -126,6 +126,11 @@ print_file() {
 list_dependencies() {
 	for FILE in "$@" ; do
 		if [ -e "$FILE" ] ; then
+		    if [ -d "$FILE" ]; then
+		    find "$FILE" -type f | while read -r F; do
+		        list_dependencies "$F"
+		    done
+		    else
 			print_file "$FILE"
 			if /usr/bin/ldd "$FILE" >/dev/null 2>&1 ; then
 				/usr/bin/ldd "$FILE" | \
@@ -134,6 +139,7 @@ list_dependencies() {
 					test -n "$VERBOSE" && echo "INFO: including $LINE" >&2
 					print_file "$LINE"
 				done
+			fi
 			fi
 		else
 			test -n "$VERBOSE" && echo "INFO: ignoring not existent file $FILE" >&2
