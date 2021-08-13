@@ -150,5 +150,3 @@ CMD=$(docker inspect --format='{{if .Config.Cmd}}CMD {{json .Config.Cmd}}{{end}}
 	cd "$DIR"
 	docker build --no-cache -t "$TARGET_IMAGE_NAME" .
 )
-
-rm -rf "$DIR"
