@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 # NAME
 #	strip-docker-image - strips the bare essentials from an image and exports them
 #
@@ -56,12 +56,12 @@
 #
 #
 
-function usage() {
-	echo "usage: $(basename $0) -i image-name -t stripped-image-name [-d Dockerfile] [-p package | -f file] [-v]" >&2
-	echo "	$@" >&2
+usage() {
+	echo "usage: $(basename "$0") -i image-name -t stripped-image-name [-d Dockerfile] [-p package | -f file] [-v]" >&2
+	echo "	$*" >&2
 }
 
-function parse_commandline() {
+parse_commandline() {
 
 	while getopts "vi:t:p:f:x:d:" OPT; do
 	    case "$OPT" in
@@ -104,7 +104,7 @@ function parse_commandline() {
 		exit 1
 	fi
 
-	if [ -z "$PACKAGES" -a -z "$FILES" ] ; then
+	if [ -z "$PACKAGES" ] && [ -z "$FILES" ] ; then
 		usage "Missing -p or -f options"
 		exit 1
 	fi
@@ -115,12 +115,12 @@ parse_commandline "$@"
 
 DIR=strip-docker-image-$$
 mkdir -p $DIR/export
-SCRIPT_DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
+SCRIPT_DIR=$( cd "$( dirname "$0" )" && pwd )
 
-docker run -v $PWD/$DIR/export:/export \
-	  -v $SCRIPT_DIR:/mybin \
+docker run --rm -v "$PWD/$DIR/export:/export" \
+	  -v "$SCRIPT_DIR:/mybin" \
 	  --entrypoint="/bin/sh" \
-	  $IMAGE_NAME \
+	  "$IMAGE_NAME" \
 	  /mybin/strip-docker-image-export -d /export $VERBOSE $PACKAGES $FILES
 
 cat > $DIR/Dockerfile <<!
@@ -129,26 +129,26 @@ ADD export /
 !
 
 for DOCKERFILE in $DOCKERFILES ; do
-    sed ':x; /\\$/ { N; s/\\\n//; tx }' "$(eval echo $DOCKERFILE)" \
+    sed ':x; /\\$/ { N; s/\\\n//; tx }' "$(eval echo "$DOCKERFILE")" \
 	    | grep -v '^\(FROM\|RUN\|ADD\|COPY\)' \
 	    >> $DIR/Dockerfile
 done
 
 for PORT in $EXPOSE_PORTS ; do
-	echo EXPOSE $PORT >> $DIR/Dockerfile
+	echo EXPOSE "$PORT" >> "$DIR/Dockerfile"
 done
 
-EXPOSE=$(docker inspect -f '{{range $key, $value := .Config.ExposedPorts}}{{$key}} {{end}}' $IMAGE_NAME | sed -e 's/\/[a-z]* / /g')
-ENTRYPOINT=$(docker inspect --format='{{if .Config.Entrypoint}}ENTRYPOINT {{json .Config.Entrypoint}}{{end}}' $IMAGE_NAME)
-CMD=$(docker inspect --format='{{if .Config.Cmd}}CMD {{json .Config.Cmd}}{{end}}' $IMAGE_NAME)
+EXPOSE=$(docker inspect -f '{{range $key, $value := .Config.ExposedPorts}}{{$key}} {{end}}' "$IMAGE_NAME" | sed -e 's/\/[a-z]* / /g')
+#ENTRYPOINT=$(docker inspect --format='{{if .Config.Entrypoint}}ENTRYPOINT {{json .Config.Entrypoint}}{{end}}' "$IMAGE_NAME")
+CMD=$(docker inspect --format='{{if .Config.Cmd}}CMD {{json .Config.Cmd}}{{end}}' "$IMAGE_NAME")
 
-[ -z "$EXPOSE" ] || echo "EXPOSE $EXPOSE" >> $DIR/Dockerfile
-[ -z "$ENTRYPOINT" ] || echo $ENTRYPOINT >> $DIR/Dockerfile
-[ -z "$CMD" ] || echo $CMD >> $DIR/Dockerfile
+[ -z "$EXPOSE" ] || echo "EXPOSE $EXPOSE" >> "$DIR/Dockerfile"
+#[ -z "$ENTRYPOINT" ] || echo "$ENTRYPOINT" >> "$DIR/Dockerfile"
+[ -z "$CMD" ] || echo "$CMD" >> "$DIR/Dockerfile"
 
 (
-	cd $DIR
-	docker build --no-cache -t $TARGET_IMAGE_NAME .
+	cd "$DIR"
+	docker build --no-cache -t "$TARGET_IMAGE_NAME" .
 )
 
-rm -rf $DIR
+rm -rf "$DIR"

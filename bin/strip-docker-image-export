@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # NAME
 #	strip-docker-image-export  - exports the bare essentials from a Docker image
@@ -61,12 +61,12 @@
 #
 export EXPORT_DIR=/export
 
-function usage() {
-	echo "usage: $(basename $0) [-v] [-d export-dir ] [-p package | -f file]" >&2
-	echo "	$@" >&2
+usage() {
+	echo "usage: $(basename "$0") [-v] [-d export-dir ] [-p package | -f file]" >&2
+	echo "	$*" >&2
 }
 
-function parse_commandline() {
+parse_commandline() {
 
 	while getopts "vp:f:d:" OPT; do
 	    case "$OPT" in
@@ -90,17 +90,17 @@ function parse_commandline() {
 	done
 	shift $((OPTIND-1))
 
-	if [ -z "$PACKAGES" -a -z "$FILES" ] ; then
+	if [ -z "$PACKAGES" ] && [ -z "$FILES" ] ; then
 		usage "Missing -p or -f options"
 		exit 1
 	fi
-	if [ ! -d $EXPORT_DIR ] ; then
+	if [ ! -d "$EXPORT_DIR" ] ; then
 		usage "$EXPORT_DIR is not a directory."
 		exit 1
 	fi
 }
 
-function print_file() {
+print_file() {
 		if [ "$1" = "/usr/bin/ldd" ]; then
 			exit
 		fi
@@ -117,20 +117,20 @@ function print_file() {
 				if expr "$TARGET" : '^/' >/dev/null 2>&1 ; then
 					list_dependencies "$TARGET"
 				else
-					list_dependencies $(dirname "$1")/"$TARGET"
+					list_dependencies "$(dirname "$1")/$TARGET"
 				fi
 			fi
 		fi
 }
 
-function list_dependencies() {
-	for FILE in $@ ; do
+list_dependencies() {
+	for FILE in "$@" ; do
 		if [ -e "$FILE" ] ; then
 			print_file "$FILE"
 			if /usr/bin/ldd "$FILE" >/dev/null 2>&1 ; then
 				/usr/bin/ldd "$FILE" | \
 				awk '/statically/{next;} /=>/ { print $3; next; } { print $1 }' | \
-				while read LINE ; do
+				while read -r LINE ; do
 					test -n "$VERBOSE" && echo "INFO: including $LINE" >&2
 					print_file "$LINE"
 				done
@@ -141,25 +141,25 @@ function list_dependencies() {
 	done
 }
 
-function list_packages() {
+list_packages() {
 		if test -e /usr/bin/dpkg; then
-			DEPS=$(/usr/bin/dpkg -L $1)
+			DEPS="$(/usr/bin/dpkg -L "$1")"
 		elif test -e /usr/bin/rpm; then
-			DEPS=$(/usr/bin/rpm -ql $1)
+			DEPS="$(/usr/bin/rpm -ql "$1")"
 		elif test -e /sbin/apk; then
-			DEPS=$(/sbin/apk info -L $1 | grep -Ev '^$|contains:' | sed 's/^/\//g')
+			DEPS=$(/sbin/apk info -L "$1" | grep -Ev '^$|contains:' | sed 's/^/\//g')
 		else
 			echo 'WARN: Unknown OS, aborted list_packages()'
 			exit
 		fi
-		while read FILE ; do
+		echo "$DEPS" | while read -r FILE ; do
 			if [ ! -d "$FILE" ] ; then
 				list_dependencies "$FILE"
 			fi
-    done <<< "$DEPS"
+    done
 }
 
-function list_all_packages() {
+list_all_packages() {
 	for i in "$@" ; do
 		list_packages "$i"
 	done
@@ -175,4 +175,4 @@ tar czf - $(
 	list_dependencies $FILES
 	)  | sort -u
 
-) | ( cd $EXPORT_DIR ; tar -xzh${VERBOSE}f - )
+) | ( cd "$EXPORT_DIR" ; tar -xzh${VERBOSE}f - )
